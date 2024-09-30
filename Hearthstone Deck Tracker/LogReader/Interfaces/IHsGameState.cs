@@ -28,9 +28,6 @@ namespace Hearthstone_Deck_Tracker.LogReader.Interfaces
 		bool WasInProgress { get; set; }
 		int GameTriggerCount { get; set; }
 		Zone CurrentEntityZone { get; set; }
-		/// <summary>
-		/// 环境是否已备好
-		/// </summary>
 		bool DeterminedPlayers { get; }
 		int Turn { get; }
 		int GetTurnNumber();

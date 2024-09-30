@@ -3,6 +3,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Documents;
@@ -21,6 +22,7 @@ using Hearthstone_Deck_Tracker.Hearthstone.Secrets;
 using Hearthstone_Deck_Tracker.HsReplay;
 using Hearthstone_Deck_Tracker.Live;
 using Hearthstone_Deck_Tracker.LogReader.Interfaces;
+using Hearthstone_Deck_Tracker.Properties;
 using Hearthstone_Deck_Tracker.Stats;
 using Hearthstone_Deck_Tracker.Utility.Analytics;
 using Hearthstone_Deck_Tracker.Utility.Extensions;
@@ -29,6 +31,8 @@ using Hearthstone_Deck_Tracker.Utility.ValueMoments.Utility;
 using HSReplay;
 using HSReplay.OAuth.Data;
 using HSReplay.Requests;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
+
 
 #endregion
 
@@ -374,7 +378,7 @@ namespace Hearthstone_Deck_Tracker.Hearthstone
 			_currentGameType = GameType.GT_UNKNOWN;
 			_currentFormatType = FormatType.FT_UNKNOWN;
 			if(!IsInMenu && resetStats)
-				CurrentGameStats = new GameStats(GameResult.None, "", "") {PlayerName = "", OpponentName = "", Region = CurrentRegion};
+				CurrentGameStats = new GameStats(GameResult.None, "", "") { PlayerName = "", OpponentName = "", Region = CurrentRegion };
 			PowerLog.Clear();
 			_battlegroundsBoardState?.Reset();
 			BattlegroundsDuosBoardState = null;
@@ -419,7 +423,7 @@ namespace Hearthstone_Deck_Tracker.Hearthstone
 
 		public int GetTurnNumber()
 		{
-			if (!IsMulliganDone)
+			if(!IsMulliganDone)
 				return 0;
 			return (GameEntity?.GetTag(GameTag.TURN) + 1) / 2 ?? 0;
 		}
@@ -441,7 +445,7 @@ namespace Hearthstone_Deck_Tracker.Hearthstone
 		{
 			if(!_battlegroundsHeroLatestTavernUpTurn.ContainsKey(id))
 				_battlegroundsHeroLatestTavernUpTurn[id] = new Dictionary<int, int>();
-			if (value > 1)
+			if(value > 1)
 				_battlegroundsHeroLatestTavernUpTurn[id][value] = GetTurnNumber();
 		}
 
@@ -729,6 +733,127 @@ namespace Hearthstone_Deck_Tracker.Hearthstone
 				) : null)
 				.WhereNotNull()
 				.ToList();
+		}
+
+		/// <summary>
+		/// 获取当前的上下文状态以传给GPT
+		/// </summary>
+		/// <returns></returns>
+		public object GetCurStateForGPT()
+		{
+			var player_hand = Player.Hand.Select(p =>
+			{
+				return p.Card.GetCardInfo();
+			});
+
+			var player_board = Player.Minions.Select(p =>
+			{
+				//疲惫状态，当疲惫状态为0的时候可以攻击，但是如果有更好的名字代替就直接修改
+				var exhausted = p.GetTag(GameTag.EXHAUSTED);
+				return p.Card.GetCardInfo();
+			});
+
+			var opponent_hand = Opponent.Hand.Select(p =>
+			{
+				return p.Card.GetCardInfo();
+			});
+
+			var opponent_board = Opponent.Board.Select(p =>
+			{
+				return p.Card.GetCardInfo();
+			});
+
+			var remainingMana = PlayerEntity?.GetTag(GameTag.RESOURCES) + PlayerEntity?.GetTag(GameTag.TEMP_RESOURCES) - PlayerEntity?.GetTag(GameTag.RESOURCES_USED);
+
+			var result = new
+			{
+				player = new
+				{
+					hero = new
+					{
+						cardId = "Player",
+						//英雄武器
+						heroWeapon = Player.PlayerEntities.Where(p => p.IsWeapon).FirstOrDefault()?.Card?.GetCardInfo(),
+						//英雄攻击力
+						heroAttack = Player?.Hero?.Attack,
+						canAttack = Player?.Hero?.GetTag(GameTag.EXHAUSTED) == 0,
+						//英雄技能
+						heroPower = Player?.PlayerEntities.Where(p => p.IsHeroPower && p.IsInPlay).FirstOrDefault()?.Card?.GetCardInfo()
+					},
+					hand = Player?.Hand.Select(p =>
+					{
+						return p.Card.GetCardInfo();
+					}),
+					boardMinions = Player?.Minions.Select(p =>
+					{
+						// 获取是否可以攻击
+						var canAttack = p.GetTag(GameTag.EXHAUSTED) == 0;
+
+						// 获取卡片信息
+						var cardInfo = p.Card.GetCardInfo();
+
+						return new
+						{
+							cardInfo.cardName,
+							cardInfo.cardType,
+							cardInfo.cost,
+							cardInfo.description,
+							cardInfo.cardId,
+							cardInfo.attack,
+							cardInfo.health,
+							canAttack,
+							zonePosition = p.GetTag(GameTag.ZONE_POSITION)
+						};
+					}),
+					health = Player?.Hero?.Health,
+					remainingMana,
+					DeckNumber = Player?.Deck.Count()
+				},
+				opponent = new
+				{
+					hero=new {
+						cardId = "Opponent",
+					},
+					handNumber = Opponent.Hand.Count(),
+					boardMinions = Opponent.Minions.Select(p =>
+					{
+						return p.Card.GetCardInfo();
+					}),
+					health = Opponent?.Hero?.Health,
+				}
+			};
+
+			return Newtonsoft.Json.JsonConvert.SerializeObject(result);
+		}
+
+
+	}
+
+	public static class CardExtensions
+	{
+		public static dynamic GetCardInfo(this Card card)
+		{
+			// 获取基本信息：名称、费用、效果描述、卡片ID、手牌中的位置
+			var cardName = card.Name;
+			var cost = card.Cost;
+			var description = card.Text;
+			var cardId = card.Id;
+			var cardType = card.TypeEnum.ToString();
+			//var zonePosition = card.ZonePosition; // 这个字段可能需要根据你具体使用的API获取
+
+			var attack = card.Attack;   // 获取攻击力
+			var health = card.Health;   // 获取生命值
+
+			return new
+			{
+				cardName,
+				cardType,
+				cost,
+				description,
+				cardId,
+				attack,
+				health
+			};
 		}
 	}
 }

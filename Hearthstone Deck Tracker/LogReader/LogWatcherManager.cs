@@ -35,16 +35,16 @@ namespace Hearthstone_Deck_Tracker.LogReader
 		public static LogWatcherInfo PowerLogWatcherInfo => new LogWatcherInfo
 		{
 			Name = "Power",
-			StartsWithFilters = new[] {"PowerTaskList.DebugPrintPower", "GameState.", "PowerProcessor.EndCurrentTaskList"},
-			ContainsFilters = new[] {"Begin Spectating", "Start Spectator", "End Spectator"}
+			StartsWithFilters = new[] { "PowerTaskList.DebugPrintPower", "GameState.", "PowerProcessor.EndCurrentTaskList" },
+			ContainsFilters = new[] { "Begin Spectating", "Start Spectator", "End Spectator" }
 		};
 
-		public static LogWatcherInfo ArenaLogWatcherInfo => new LogWatcherInfo {Name = "Arena" };
-		public static LogWatcherInfo LoadingScreenLogWatcherInfo => new LogWatcherInfo {Name = "LoadingScreen", StartsWithFilters = new[] {"LoadingScreen.OnSceneLoaded", "Gameplay", "LoadingScreen.OnScenePreUnload", "MulliganManager.HandleGameStart" } };
+		public static LogWatcherInfo ArenaLogWatcherInfo => new LogWatcherInfo { Name = "Arena" };
+		public static LogWatcherInfo LoadingScreenLogWatcherInfo => new LogWatcherInfo { Name = "LoadingScreen", StartsWithFilters = new[] { "LoadingScreen.OnSceneLoaded", "Gameplay", "LoadingScreen.OnScenePreUnload", "MulliganManager.HandleGameStart" } };
 
 		public LogWatcherManager()
 		{
-			_logWatcher = new LogWatcher(new []
+			_logWatcher = new LogWatcher(new[]
 			{
 				AchievementsLogWatcherInfo,
 				PowerLogWatcherInfo,
@@ -139,7 +139,8 @@ namespace Hearthstone_Deck_Tracker.LogReader
 							{
 								_choicesHandler.Handle(line.Line, _gameState, _game);
 							}
-							else {
+							else
+							{
 								_choicesHandler.Flush(_gameState, _game);
 							}
 
@@ -155,7 +156,7 @@ namespace Hearthstone_Deck_Tracker.LogReader
 						}
 						else
 						{
-							if(line.LineContent.Contains("TAG_CHANGE"))
+							if(line.LineContent.Contains("致命之猫#515186"))
 							{
 
 							}
@@ -174,6 +175,46 @@ namespace Hearthstone_Deck_Tracker.LogReader
 				}
 			}
 			//Helper.UpdateEverything(_game);
+			if(lines.Count > 0)
+			{
+				var gameStateJson = _game.GetCurStateForGPT();
+				var template = $@"你现在是一个非常厉害的炉石传说的玩家，你需要根据当前对局的状态进行决策。
+
+决策规则：
+1、绝对不能给出超出当前英雄剩余法力的命令结果；
+2、在保障不会出现超法力的情况下，尽可能最大化利用剩余法力值；
+3、最大化随从攻击机会：所有随从如果没有明显更优的解场需求，优先攻击对方英雄。非特殊情况下，所有随从都需要进行攻击；(随从的canAttack属性表示该随从是否可以进行攻击)；
+4、如果有抽卡或其他随机性效果，先输出抽卡或随机效果指令，停止后续输出，我会执行你的操作，然后将随机操作后的更新结果再次传递给你；
+5、若决定完全结束回合，明确输出END TURN；
+6、每一个可操作对象，我都会给出对应的cardId，在你给出命令的时候，全部通过CardId进行操作；
+
+输出命令格式如下：
+1、**使用手牌命令：**
+USE CARD {{{{card_id}}}} [ON {{{{target_card_id}}}}]
+命令说明：
+USE CARD:固定值
+card_id:手牌的卡片ID
+target_card_id:目标ID(这里的ID可以是本方英雄的ID)
+[ON {{{{target_card_id}}}}]:中括号表示可选，当使用的手牌不需要目标的时候，不用给出ON
+
+2、**使用随从攻击命令：**
+MINION ATTACK {{{{attacker_id}}}} ON {{{{target_card_id}}}}
+命令说明：
+MINION ATTACK:固定值，表示使用随从进行攻击
+attacker_id:随从的卡片ID
+target_card_id:目标ID(这里的ID可以是对方英雄的ID)
+
+3、**使用英雄技能**
+USE HERO POWER
+
+4、**结束回合命令：**
+END TURN
+
+对局的状态信息如下：
+{gameStateJson}
+
+根据以上信息，按照前面给出的""决策规则""，做出最佳的行动决策。每一行一个操作命令，并且仅给出对应的操作命令即可，我将逐行解析你的返回并调用执行器。";
+			}
 		}
 	}
 }

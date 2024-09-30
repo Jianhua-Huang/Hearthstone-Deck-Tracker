@@ -212,6 +212,7 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 			}
 			else if(UpdatingEntityRegex.IsMatch(logLine))
 			{
+				//SHOW_ENTITY或者CHANGE_ENTITY
 				var match = UpdatingEntityRegex.Match(logLine);
 				var cardId = EnsureValidCardID(match.Groups["cardId"].Value);
 				var rawEntity = match.Groups["entity"].Value;
@@ -241,7 +242,10 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 					if(type == "SHOW_ENTITY")
 					{
 						if(entity.Info.GuessedCardState != GuessedCardState.None)
+						{
+							//如果卡片是被猜测的卡片，则改为已被揭露
 							entity.Info.GuessedCardState = GuessedCardState.Revealed;
+						}
 						if(entity.Info.DeckIndex < 0 && gameState.CurrentBlock != null && gameState.CurrentBlock.SourceEntityId != 0)
 						{
 							if(game.Entities.TryGetValue(gameState.CurrentBlock.SourceEntityId, out var source) && source.HasDredge())
