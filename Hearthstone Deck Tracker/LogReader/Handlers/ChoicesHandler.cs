@@ -25,7 +25,7 @@ internal class ChoicesHandler
 			var playerName = match.Groups["player"].Value;
 			var playerId = gameState.PlayerIdsByPlayerName.TryGetValue(playerName, out var pi) ? (int?)pi : null;
 			var choiceType = Enum.TryParse(match.Groups["choiceType"].Value, out ChoiceType ct) ? ct : ChoiceType.INVALID;
-
+			//调试到此处
 			if(playerId.HasValue)
 			{
 				_tmpChoice = new ChoiceBuilder(choiceId, taskList, playerId.Value, choiceType);

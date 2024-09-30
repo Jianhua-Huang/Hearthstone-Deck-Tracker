@@ -154,6 +154,10 @@ namespace Hearthstone_Deck_Tracker.LogReader
 						}
 						else
 						{
+							if(line.LineContent.Contains("TAG_CHANGE"))
+							{
+
+							}
 							_powerLineHandler.Handle(line.Line, _gameState, _game);
 							OnPowerLogLine.Execute(line.Line);
 							_choicesHandler.Flush(_gameState, _game);
@@ -168,7 +172,7 @@ namespace Hearthstone_Deck_Tracker.LogReader
 						break;
 				}
 			}
-			Helper.UpdateEverything(_game);
+			//Helper.UpdateEverything(_game);
 		}
 	}
 }

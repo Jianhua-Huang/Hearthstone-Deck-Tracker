@@ -32,7 +32,7 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 				var match = GameEntityRegex.Match(logLine);
 				var id = int.Parse(match.Groups["id"].Value);
 				if(!game.Entities.ContainsKey(id))
-					game.Entities.Add(id, new Entity(id) {Name = "GameEntity"});
+					game.Entities.Add(id, new Entity(id) { Name = "GameEntity" });
 				gameState.SetCurrentEntity(id);
 				if(gameState.DeterminedPlayers)
 					_tagChangeHandler.InvokeQueuedActions(game);
@@ -48,6 +48,7 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 					game.Entities[id].Name = game.GetStoredPlayerName(id);
 				gameState.SetCurrentEntity(id);
 				if(gameState.DeterminedPlayers)
+					//判断是否所有玩家就位，若所有玩家就位，则执行挂起的Action
 					_tagChangeHandler.InvokeQueuedActions(game);
 				return;
 			}
@@ -57,12 +58,16 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 				var rawEntity = match.Groups["entity"].Value.Replace("UNKNOWN ENTITY ", "");
 				if(rawEntity.StartsWith("[") && EntityRegex.IsMatch(rawEntity))
 				{
+					//判断Entity是否是一个复杂对象
 					var entity = EntityRegex.Match(rawEntity);
 					var id = int.Parse(entity.Groups["id"].Value);
 					_tagChangeHandler.TagChange(gameState, match.Groups["tag"].Value, id, match.Groups["value"].Value, game);
 				}
 				else if(int.TryParse(rawEntity, out int entityId))
+				{
+					//判断Entity是否是一个ID
 					_tagChangeHandler.TagChange(gameState, match.Groups["tag"].Value, entityId, match.Groups["value"].Value, game);
+				}
 				else
 				{
 					var entity = game.Entities.FirstOrDefault(x => x.Value.Name == rawEntity);
@@ -78,7 +83,7 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 							entity = unknownHumanPlayer;
 						}
 
-						//while the id is unknown, store in tmp entities
+						//在 ID 未知时，将其存储在临时实体中。
 						var tmpEntity = _tmpEntities.FirstOrDefault(x => x.Name == rawEntity);
 						if(tmpEntity == null)
 						{
@@ -131,10 +136,13 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 			}
 			else if(CreationRegex.IsMatch(logLine))
 			{
+				//FULL_ENTITY - Updating [entityName=UNKNOWN ENTITY [cardType=INVALID] id=4 zone=DECK zonePos=0 cardId= player=1] CardID=
 				var match = CreationRegex.Match(logLine);
 				var id = int.Parse(match.Groups["id"].Value);
 				var cardId = EnsureValidCardID(match.Groups["cardId"].Value);
 				var zone = GameTagHelper.ParseEnum<Zone>(match.Groups["zone"].Value);
+
+				//是否推测卡片的ID
 				var guessedCardId = false;
 				var guessedLocation = DeckLocation.Unknown;
 				if(!game.Entities.ContainsKey(id))
@@ -180,8 +188,8 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 				gameState.CurrentEntityHasCardId = !string.IsNullOrEmpty(cardId);
 				gameState.CurrentEntityZone = zone;
 
-				// For tourists, a different entity of the Tourist card is created by the TouristEnchantment, and that entity is REMOVEDFROMGAME.
-				// we can predict, then, that there is a real entity of that cardId on the opponents deck.
+				// 对于“游客”卡牌，由 TouristEnchantment 创建了一个不同的实体，该实体被移除出游戏（REMOVEDFROMGAME）。
+				// 因此，我们可以推测，对手的牌库中有一个该 cardId 的真实实体。
 				if(zone == Zone.REMOVEDFROMGAME && gameState.CurrentBlock != null)
 				{
 					Entity? actionStartingEntity = null;
@@ -368,7 +376,7 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 					if(actionStartingCardId == Collectible.Shaman.Shudderwock)
 					{
 						var effectCardId = match.Groups["effectCardId"].Value;
-						if (!string.IsNullOrEmpty(effectCardId))
+						if(!string.IsNullOrEmpty(effectCardId))
 							actionStartingCardId = effectCardId;
 					}
 					if(actionStartingCardId == NonCollectible.Rogue.ValeeratheHollow_ShadowReflectionToken)
@@ -499,7 +507,7 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 								break;
 							case Collectible.Rogue.Plagiarize:
 							case Collectible.Rogue.PlagiarizeCorePlaceholder:
-								if (actionStartingEntity != null)
+								if(actionStartingEntity != null)
 								{
 									var player = actionStartingEntity.IsControlledBy(game.Player.Id) ? game.Opponent : game.Player;
 									foreach(var card in player.CardsPlayedThisTurn)
@@ -534,7 +542,7 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 								break;
 							case Collectible.Neutral.CthunTheShattered:
 								// The pieces are created in random order. So we can not assign predicted ids to entities the way we usually do.
-								if (actionStartingEntity != null)
+								if(actionStartingEntity != null)
 								{
 									var player = actionStartingEntity.IsControlledBy(game.Player.Id) ? game.Player : game.Opponent;
 									player.PredictUniqueCardInDeck(NonCollectible.Neutral.CThuntheShattered_EyeOfCthunToken, true);
@@ -576,7 +584,7 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 								AddKnownCardId(gameState, NonCollectible.Neutral.RivendareWarrider_ZeliekConquestriderToken);
 								break;
 							case NonCollectible.Deathknight.Helya_HelyaEnchantment:
-								if (!gameState.LastPlagueDrawn.IsEmpty())
+								if(!gameState.LastPlagueDrawn.IsEmpty())
 								{
 									AddKnownCardId(gameState, gameState.LastPlagueDrawn.Pop());
 								}
@@ -627,7 +635,7 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 								AddKnownCardId(gameState, NonCollectible.Neutral.TheCoinCore);
 								break;
 							case Collectible.Neutral.AugmentedElekk:
-								if (gameState.CurrentBlock?.Parent != null)
+								if(gameState.CurrentBlock?.Parent != null)
 								{
 									var (entity, ids) = gameState.CurrentBlock.Parent.EntitiesCreatedInDeck
 										.LastOrDefault(
@@ -1060,7 +1068,10 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 					gameState.GameTriggerCount++;
 			}
 			else if(logLine.Contains("CREATE_GAME"))
+			{
+				//创建游戏
 				_tagChangeHandler.ClearQueuedActions();
+			}
 			else if(logLine.Contains("BLOCK_END"))
 			{
 				if(gameState.GameTriggerCount < 10 && (game.GameEntity?.HasTag(GameTag.TURN) ?? false))
@@ -1118,6 +1129,11 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 				gameState.ResetCurrentEntity();
 		}
 
+		/// <summary>
+		/// 校验卡片ID是否有校，如果有更新则将更新后的卡片ID返回，若没有则直接返回原值
+		/// </summary>
+		/// <param name="cardId"></param>
+		/// <returns></returns>
 		private static string EnsureValidCardID(string cardId)
 		{
 			if(string.IsNullOrEmpty(cardId))

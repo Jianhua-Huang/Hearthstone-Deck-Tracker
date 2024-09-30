@@ -112,7 +112,7 @@ namespace HearthWatcher.LogReader
 			if(_running)
 				return;
 			_logDir = logDirectory;
-			MoveOrDeleteLogFile();
+			//MoveOrDeleteLogFile();
 			_startingPoint = startingPoint;
 			_stop = false;
 			_offset = 0;

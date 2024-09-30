@@ -20,6 +20,7 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 
 		public void TagChange(IHsGameState gameState, string rawTag, int id, string rawValue, IGame game, bool isCreationTag = false)
 		{
+			//将对应的Tag文本转为对应的枚举类型
 			var tag = GameTagHelper.ParseEnum<GameTag>(rawTag);
 			var value = GameTagHelper.ParseTag(tag, rawValue);
 			TagChange(gameState, tag, id, value, game, isCreationTag);
@@ -38,6 +39,7 @@ namespace Hearthstone_Deck_Tracker.LogReader.Handlers
 
 			if(isCreationTag)
 			{
+				//如果是新建标签，则需要找到对应的Action，并加入队列等待执行
 				var action = _tagChangeActions.FindAction(tag, game, gameState, id, value, prevValue);
 				if(action != null)
 				{
