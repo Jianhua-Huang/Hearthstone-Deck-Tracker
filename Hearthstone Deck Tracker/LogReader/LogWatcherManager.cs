@@ -150,6 +150,7 @@ namespace Hearthstone_Deck_Tracker.LogReader
 						}
 						else if(line.LineContent.StartsWith("PowerProcessor.EndCurrentTaskList"))
 						{
+							//调试到此
 							_choicesHandler.Handle(line.Line, _gameState, _game);
 						}
 						else

@@ -28,6 +28,7 @@ internal class ChoicesHandler
 			//调试到此处
 			if(playerId.HasValue)
 			{
+				//创建一个选择
 				_tmpChoice = new ChoiceBuilder(choiceId, taskList, playerId.Value, choiceType);
 			}
 		}
@@ -67,6 +68,7 @@ internal class ChoicesHandler
 
 			if(_tmpChoice is ChoiceBuilder cb)
 			{
+				//将可供选择的卡片添加到备选列表
 				cb.AttachOfferedEntity(id);
 			}
 			else if(_tmpChoice is OfferedChoice tc)
